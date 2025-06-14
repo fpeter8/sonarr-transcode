@@ -53,9 +53,11 @@ jobs:
           fi
           echo "version=${SONARR_VERSION}" >> $GITHUB_OUTPUT
           
-          # Get actual version number from image
-          docker pull lscr.io/linuxserver/sonarr:${SONARR_VERSION}
-          ACTUAL_VERSION=$(docker run --rm lscr.io/linuxserver/sonarr:${SONARR_VERSION} cat /app/sonarr/package_info | grep -oP 'PackageVersion="\K[^"]+' || echo "unknown")
+          # Get actual version number from LinuxServer API
+          ACTUAL_VERSION=$(curl -s "https://api.linuxserver.io/api/v1/images" | jq -r '.data.repositories.linuxserver[] | select(.name == "sonarr") | .version' | sed 's/-.*//')
+          if [ -z "$ACTUAL_VERSION" ]; then
+            ACTUAL_VERSION="unknown"
+          fi
           echo "actual_version=${ACTUAL_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Generate build date

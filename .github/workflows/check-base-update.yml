@@ -19,14 +19,18 @@ jobs:
       - name: Check for base image updates
         id: check
         run: |
-          # Get latest Sonarr version from LinuxServer
-          docker pull lscr.io/linuxserver/sonarr:latest
-          LATEST_VERSION=$(docker run --rm lscr.io/linuxserver/sonarr:latest cat /app/sonarr/package_info | grep -oP 'PackageVersion="\K[^"]+' || echo "unknown")
+          # Get latest Sonarr version from LinuxServer API
+          LATEST_VERSION=$(curl -s "https://api.linuxserver.io/api/v1/images" | jq -r '.data.repositories.linuxserver[] | select(.name == "sonarr") | .version' | sed 's/-.*//')
+          if [ -z "$LATEST_VERSION" ]; then
+            LATEST_VERSION="unknown"
+          fi
           echo "latest_version=${LATEST_VERSION}" >> $GITHUB_OUTPUT
           
           # Get current version from our latest image
           docker pull ghcr.io/${{ github.repository }}:latest || echo "No existing image found"
           CURRENT_VERSION=$(docker inspect ghcr.io/${{ github.repository }}:latest --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' 2>/dev/null || echo "none")
+          # Extract just the version number from the tag (remove date suffix if present)
+          CURRENT_VERSION=$(echo "$CURRENT_VERSION" | sed 's/-.*//')
           echo "current_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
           
           # Check if update is needed
