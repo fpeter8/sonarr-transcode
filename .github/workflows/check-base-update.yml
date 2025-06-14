@@ -1,0 +1,64 @@
+name: Check Base Image Updates
+
+on:
+  schedule:
+    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+  workflow_dispatch:
+
+jobs:
+  check-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for base image updates
+        id: check
+        run: |
+          # Get latest Sonarr version from LinuxServer
+          docker pull lscr.io/linuxserver/sonarr:latest
+          LATEST_VERSION=$(docker run --rm lscr.io/linuxserver/sonarr:latest cat /app/sonarr/package_info | grep -oP 'PackageVersion="\K[^"]+' || echo "unknown")
+          echo "latest_version=${LATEST_VERSION}" >> $GITHUB_OUTPUT
+          
+          # Get current version from our latest image
+          docker pull ghcr.io/${{ github.repository }}:latest || echo "No existing image found"
+          CURRENT_VERSION=$(docker inspect ghcr.io/${{ github.repository }}:latest --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' 2>/dev/null || echo "none")
+          echo "current_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
+          
+          # Check if update is needed
+          if [ "${LATEST_VERSION}" != "${CURRENT_VERSION}" ] && [ "${LATEST_VERSION}" != "unknown" ]; then
+            echo "update_needed=true" >> $GITHUB_OUTPUT
+          else
+            echo "update_needed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.check.outputs.update_needed == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update Sonarr base image to ${{ steps.check.outputs.latest_version }}"
+          title: "Update Sonarr base image to ${{ steps.check.outputs.latest_version }}"
+          body: |
+            ## Automated Base Image Update
+            
+            This PR updates the Sonarr base image to version `${{ steps.check.outputs.latest_version }}`.
+            
+            ### Changes
+            - Base image updated from `${{ steps.check.outputs.current_version }}` to `${{ steps.check.outputs.latest_version }}`
+            
+            ### Next Steps
+            1. Review the changes
+            2. Merge this PR to trigger the build workflow
+            3. New image will be automatically published to ghcr.io
+            
+            ---
+            *This PR was automatically created by the base image update checker workflow.*
+          branch: update-sonarr-${{ steps.check.outputs.latest_version }}
+          delete-branch: true
+          author: GitHub Actions <noreply@github.com>
+          committer: peter@semmiseg.info <peter@semmiseg.info>
