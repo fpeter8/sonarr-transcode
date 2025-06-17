@@ -1,0 +1,23 @@
+#!/usr/bin/with-contenv bash
+
+# Copy scripts from noexec volume to executable location
+SOURCE_DIR="/config/scripts"
+DEST_DIR="/app/scripts"
+
+# Check if source directory exists
+if [ -d "$SOURCE_DIR" ]; then
+    echo "[custom-init] Copying scripts from $SOURCE_DIR to $DEST_DIR"
+    
+    # Create destination directory if it doesn't exist
+    mkdir -p "$DEST_DIR"
+    
+    # Copy files recursively, preserving permissions and structure
+    cp -R --preserve=mode "$SOURCE_DIR"/* "$DEST_DIR"/ 2>/dev/null || true
+    
+    # Change ownership to match the running user (typically abc:abc in LinuxServer containers)
+    chown -R abc:abc "$DEST_DIR"
+    
+    echo "[custom-init] Script copy completed"
+else
+    echo "[custom-init] Source directory $SOURCE_DIR not found, skipping script copy"
+fi

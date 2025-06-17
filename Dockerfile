@@ -12,6 +12,12 @@ RUN \
         /tmp/* \
         /var/cache/apk/*
 
+# Create scripts directory
+RUN mkdir -p /app/scripts
+
+# Add custom init script
+COPY --chmod=755 custom-cont-init.d /custom-cont-init.d/
+
 # Labels
 LABEL maintainer="Peter Farkas <peter@semmiseg.info>"
 LABEL org.opencontainers.image.source="https://github.com/fpeter8/sonarr-transcode"
