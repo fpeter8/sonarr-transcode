@@ -49,7 +49,7 @@ jobs:
           echo "🔍 Determining Sonarr version to build..."
           
           # Check if manual version override is provided
-          if [ "${{ github.event.inputs.sonarr_version }}" != "" ] && [ "${{ github.event.inputs.sonarr_version }}" != "latest" ]; then
+          if [ "${{ github.event.inputs.sonarr_version }}" != "" ] ; then
             SONARR_VERSION="${{ github.event.inputs.sonarr_version }}"
             echo "📌 Using manually specified version: ${SONARR_VERSION}"
           else
@@ -72,7 +72,6 @@ jobs:
           
           echo "✅ Will build Sonarr version: ${SONARR_VERSION}"
           echo "version=${SONARR_VERSION}" >> $GITHUB_OUTPUT
-          echo "actual_version=${SONARR_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Generate build date
         id: date
@@ -88,7 +87,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ steps.sonarr_version.outputs.actual_version }}-${{ steps.date.outputs.date }},enable={{is_default_branch}}
+            type=raw,value=${{ steps.sonarr_version.outputs.version }}-${{ steps.date.outputs.date }},enable={{is_default_branch}}
             type=ref,event=pr
 
       - name: Display build information
@@ -96,7 +95,7 @@ jobs:
           echo "🏗️ Build Information:"
           echo "   Registry: ${{ env.REGISTRY }}"
           echo "   Image: ${{ env.IMAGE_NAME }}"
-          echo "   Sonarr Version: ${{ steps.sonarr_version.outputs.actual_version }}"
+          echo "   Sonarr Version: ${{ steps.sonarr_version.outputs.version }}"
           echo "   Build Date: ${{ steps.date.outputs.date }}"
           echo "   Event: ${{ github.event_name }}"
           echo ""

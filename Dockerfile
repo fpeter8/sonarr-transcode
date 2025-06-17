@@ -13,7 +13,7 @@ RUN \
         /var/cache/apk/*
 
 # Labels
-LABEL maintainer="peter@semmiseg.info"
+LABEL maintainer="Peter Farkas <peter@semmiseg.info>"
 LABEL org.opencontainers.image.source="https://github.com/fpeter8/sonarr-transcode"
 LABEL org.opencontainers.image.description="Sonarr with ffmpeg and mkvtoolnix for transcoding"
 LABEL org.opencontainers.image.licenses="MIT"

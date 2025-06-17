@@ -108,4 +108,4 @@ jobs:
           branch: update-sonarr-${{ steps.check.outputs.latest_version }}
           delete-branch: true
           author: GitHub Actions <noreply@github.com>
-          committer: peter@semmiseg.info <peter@semmiseg.info>
+          committer: Peter Farkas <peter@semmiseg.info>
