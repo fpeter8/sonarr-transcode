@@ -7,6 +7,7 @@ on:
 
 jobs:
   check-update:
+    name: Check for Sonarr Base Image Updates
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -23,12 +24,11 @@ jobs:
           
           # Get latest Sonarr version from LinuxServer API
           echo "📡 Fetching latest version from LinuxServer API..."
-          API_RESPONSE=$(curl -s "https://api.linuxserver.io/api/v1/images")
-          LATEST_VERSION=$(echo "$API_RESPONSE" | jq -r '.data.repositories.linuxserver[] | select(.name == "sonarr") | .version' | sed 's/-.*//')
+          LATEST_VERSION=$(curl -s "https://api.linuxserver.io/api/v1/images" | jq -r '.data.repositories.linuxserver[] | select(.name == "sonarr") | .version')
           
           if [ -z "$LATEST_VERSION" ]; then
             echo "❌ Failed to fetch latest version from API"
-            LATEST_VERSION="unknown"
+            exit 1
           else
             echo "✅ Latest Sonarr version from API: ${LATEST_VERSION}"
           fi
@@ -42,7 +42,7 @@ jobs:
             echo "✅ Current version in repository: ${CURRENT_VERSION}"
           else
             echo "❌ VERSION file not found"
-            CURRENT_VERSION="none"
+            exit 1
           fi
           echo "current_version=${CURRENT_VERSION}" >> $GITHUB_OUTPUT
           
@@ -52,7 +52,7 @@ jobs:
           echo "   Current: ${CURRENT_VERSION}"
           echo "   Latest:  ${LATEST_VERSION}"
           
-          if [ "${LATEST_VERSION}" != "${CURRENT_VERSION}" ] && [ "${LATEST_VERSION}" != "unknown" ] && [ "${CURRENT_VERSION}" != "none" ]; then
+          if [ "${LATEST_VERSION}" != "${CURRENT_VERSION}" ]; then
             echo "✅ Update needed! New version available."
             echo "update_needed=true" >> $GITHUB_OUTPUT
           else
