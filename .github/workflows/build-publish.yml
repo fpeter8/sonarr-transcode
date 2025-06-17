@@ -46,23 +46,40 @@ jobs:
       - name: Get Sonarr version
         id: sonarr_version
         run: |
-          if [ "${{ github.event.inputs.sonarr_version }}" != "" ]; then
-            SONARR_VERSION="${{ github.event.inputs.sonarr_version }}"
-          else
-            SONARR_VERSION="latest"
-          fi
-          echo "version=${SONARR_VERSION}" >> $GITHUB_OUTPUT
+          echo "🔍 Determining Sonarr version to build..."
           
-          # Get actual version number from LinuxServer API
-          ACTUAL_VERSION=$(curl -s "https://api.linuxserver.io/api/v1/images" | jq -r '.data.repositories.linuxserver[] | select(.name == "sonarr") | .version' | sed 's/-.*//')
-          if [ -z "$ACTUAL_VERSION" ]; then
-            ACTUAL_VERSION="unknown"
+          # Check if manual version override is provided
+          if [ "${{ github.event.inputs.sonarr_version }}" != "" ] && [ "${{ github.event.inputs.sonarr_version }}" != "latest" ]; then
+            SONARR_VERSION="${{ github.event.inputs.sonarr_version }}"
+            echo "📌 Using manually specified version: ${SONARR_VERSION}"
+          else
+            # Read version from VERSION file
+            if [ -f VERSION ]; then
+              source VERSION
+              echo "📄 Read version from VERSION file: ${SONARR_VERSION}"
+            else
+              echo "❌ VERSION file not found!"
+              exit 1
+            fi
           fi
-          echo "actual_version=${ACTUAL_VERSION}" >> $GITHUB_OUTPUT
+          
+          # Validate version format
+          if [[ ! "$SONARR_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: ${SONARR_VERSION}"
+            echo "   Expected format: X.X.X.X (e.g., 4.0.14.2939)"
+            exit 1
+          fi
+          
+          echo "✅ Will build Sonarr version: ${SONARR_VERSION}"
+          echo "version=${SONARR_VERSION}" >> $GITHUB_OUTPUT
+          echo "actual_version=${SONARR_VERSION}" >> $GITHUB_OUTPUT
 
       - name: Generate build date
         id: date
-        run: echo "date=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+        run: |
+          BUILD_DATE=$(date +'%Y-%m-%d')
+          echo "📅 Build date: ${BUILD_DATE}"
+          echo "date=${BUILD_DATE}" >> $GITHUB_OUTPUT
 
       - name: Extract metadata
         id: meta
@@ -73,6 +90,23 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ steps.sonarr_version.outputs.actual_version }}-${{ steps.date.outputs.date }},enable={{is_default_branch}}
             type=ref,event=pr
+
+      - name: Display build information
+        run: |
+          echo "🏗️ Build Information:"
+          echo "   Registry: ${{ env.REGISTRY }}"
+          echo "   Image: ${{ env.IMAGE_NAME }}"
+          echo "   Sonarr Version: ${{ steps.sonarr_version.outputs.actual_version }}"
+          echo "   Build Date: ${{ steps.date.outputs.date }}"
+          echo "   Event: ${{ github.event_name }}"
+          echo ""
+          echo "🏷️ Tags to be created:"
+          echo "${{ steps.meta.outputs.tags }}" | while read tag; do
+            echo "   - ${tag}"
+          done
+          echo ""
+          echo "📦 Build Args:"
+          echo "   SONARR_VERSION=${{ steps.sonarr_version.outputs.version }}"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
